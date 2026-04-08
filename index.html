@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Control Trailer - Datos compartidos</title>
+    <title>Control Trailer - Autónomo</title>
     <style>
         * {
             box-sizing: border-box;
@@ -119,6 +119,17 @@
             padding: 12px;
             border-radius: 16px;
             margin-bottom: 16px;
+            text-align: center;
+        }
+        .login-card {
+            text-align: center;
+            padding: 40px;
+        }
+        .login-btn {
+            background: #4285f4;
+            width: auto;
+            display: inline-block;
+            padding: 12px 24px;
         }
         .mes-grupo {
             margin-bottom: 28px;
@@ -256,57 +267,17 @@
 </head>
 <body>
 <div class="container">
-    <div class="card">
-        <h1>🚛 Trailer Control <small>Datos compartidos</small></h1>
-        <div id="saldoDisplay" class="saldo">0,00 €</div>
-        <div class="resumen">
-            <div class="resumen-item">💰 Ingresos totales: <strong id="totalIngresos">0,00 €</strong></div>
-            <div class="resumen-item">💸 Gastos totales: <strong id="totalGastos">0,00 €</strong></div>
-        </div>
-        <div id="syncStatus" class="sync-status">🔄 Conectando...</div>
-    </div>
-
-    <div class="card">
-        <h2>📝 Nuevo movimiento</h2>
-        <div class="row-2cols">
-            <div>
-                <label>Tipo</label>
-                <select id="tipoMovimiento">
-                    <option value="ingreso">✅ Ingreso</option>
-                    <option value="gasto">❌ Gasto</option>
-                </select>
-            </div>
-            <div>
-                <label>Cantidad (€)</label>
-                <input type="number" id="cantidad" step="0.01" placeholder="0.00">
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Concepto / Descripción</label>
-            <input type="text" id="descripcion" placeholder="Ej: 500L gasóleo, manguera, carga...">
-        </div>
-        <div class="form-group">
-            <label>📅 Fecha del movimiento</label>
-            <input type="date" id="fechaMovimiento">
-            <div class="fecha-actual-hint">💡 Puedes cambiar la fecha para registrar gastos de meses anteriores.</div>
-        </div>
-        <button id="agregarBtn">➕ Agregar movimiento</button>
-    </div>
-
-    <div class="card">
-        <h2>📅 Historial por meses</h2>
-        <div id="listaMeses" class="lista-movimientos">
-            <div class="loading">Cargando datos...</div>
-        </div>
+    <div id="app">
+        <!-- El contenido se carga dinámicamente -->
     </div>
 </div>
 
 <script>
-    // ⚠️ IMPORTANTE: PON AQUÍ TU URL DE GOOGLE APPS SCRIPT
+    // ⚠️ IMPORTANTE: PON AQUÍ TU URL DE GOOGLE APPS SCRIPT (con la opción "Cualquier usuario con cuenta de Google")
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiTybjN6Qv-_NiEUhfSgJIkpnwfDOxQKNBKw446XlWKykRmeUliFEq2zLsJuDeH0fy/exec';
     
     let movimientos = [];
-    let cargando = false;
+    let usuarioAutenticado = false;
 
     function getTodayDate() {
         const today = new Date();
@@ -316,10 +287,70 @@
         return `${yyyy}-${mm}-${dd}`;
     }
 
-    async function cargarDatos() {
-        const statusDiv = document.getElementById('syncStatus');
-        statusDiv.innerHTML = '🔄 Cargando datos de la nube...';
+    // Verificar si el usuario está autenticado (intentando cargar datos)
+    async function verificarAutenticacion() {
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                mode: 'cors',
+                credentials: 'include'
+            });
+            
+            if (response.status === 401 || response.status === 403) {
+                return false;
+            }
+            
+            const data = await response.json();
+            return Array.isArray(data);
+        } catch (error) {
+            // Si hay error de CORS o autenticación, probablemente no está logueado
+            console.log('Error de autenticación:', error);
+            return false;
+        }
+    }
+
+    // Función para iniciar sesión con Google
+    function iniciarSesion() {
+        // Abrir la URL de Apps Script en una nueva ventana para autorizar
+        window.open(SCRIPT_URL, '_blank', 'width=500,height=600');
         
+        // Mostrar mensaje al usuario
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="card login-card">
+                <h2>🔐 Autorización requerida</h2>
+                <p>Se ha abierto una nueva ventana para que inicies sesión con Google.</p>
+                <p>Después de autorizar, cierra esa ventana y haz clic en el botón de abajo.</p>
+                <button class="login-btn" onclick="comprobarYAceptar()">✅ Ya inicié sesión, continuar</button>
+            </div>
+        `;
+    }
+
+    // Comprobar después de iniciar sesión
+    async function comprobarYAceptar() {
+        const app = document.getElementById('app');
+        app.innerHTML = '<div class="loading">🔄 Verificando acceso...</div>';
+        
+        const autenticado = await verificarAutenticacion();
+        if (autenticado) {
+            usuarioAutenticado = true;
+            await cargarDatos();
+            renderizarApp();
+        } else {
+            app.innerHTML = `
+                <div class="card login-card">
+                    <h2>⚠️ No se pudo verificar</h2>
+                    <p>Asegúrate de:</p>
+                    <ul style="text-align: left;">
+                        <li>Haber iniciado sesión con la cuenta de Google que tiene acceso a la hoja de cálculo</li>
+                        <li>Haber autorizado la aplicación (clic en "Permitir")</li>
+                    </ul>
+                    <button class="login-btn" onclick="iniciarSesion()">🔐 Intentar de nuevo</button>
+                </div>
+            `;
+        }
+    }
+
+    async function cargarDatos() {
         try {
             const response = await fetch(SCRIPT_URL);
             const data = await response.json();
@@ -330,22 +361,13 @@
                     id: parseInt(m.id),
                     cantidad: parseFloat(m.cantidad)
                 }));
-                statusDiv.innerHTML = '✅ Datos sincronizados con la nube';
-                setTimeout(() => {
-                    if (statusDiv.innerHTML === '✅ Datos sincronizados con la nube') {
-                        statusDiv.innerHTML = '📡 Conectado';
-                    }
-                }, 3000);
-            } else {
-                throw new Error('Datos inválidos');
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('Error al cargar:', error);
-            statusDiv.innerHTML = '⚠️ Error de conexión. Recargando...';
-            setTimeout(() => cargarDatos(), 3000);
+            return false;
         }
-        
-        renderizarTodo();
     }
 
     async function agregarMovimiento(tipo, cantidad, descripcion, fechaISO) {
@@ -370,11 +392,8 @@
             fechaISO: fechaISO
         };
         
-        const statusDiv = document.getElementById('syncStatus');
-        statusDiv.innerHTML = '💾 Guardando en la nube...';
-        
         try {
-            const response = await fetch(SCRIPT_URL, {
+            await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: {
@@ -383,19 +402,12 @@
                 body: JSON.stringify(nuevoMov)
             });
             
-            statusDiv.innerHTML = '✅ Guardado correctamente';
-            setTimeout(() => {
-                if (statusDiv.innerHTML === '✅ Guardado correctamente') {
-                    statusDiv.innerHTML = '📡 Conectado';
-                }
-            }, 2000);
-            
-            // Recargar datos después de guardar
             await cargarDatos();
+            renderizarApp();
             return true;
         } catch (error) {
             console.error('Error al guardar:', error);
-            statusDiv.innerHTML = '❌ Error al guardar. Intenta de nuevo.';
+            alert('Error al guardar. Asegúrate de tener sesión iniciada.');
             return false;
         }
     }
@@ -450,68 +462,126 @@
         return gruposArray;
     }
 
-    function renderizarTodo() {
+    function renderizarApp() {
         const { ingresos, gastos, saldo } = calcularTotalesGlobales();
-        const saldoElem = document.getElementById('saldoDisplay');
-        saldoElem.textContent = saldo.toFixed(2) + ' €';
-        if (saldo >= 0) {
-            saldoElem.classList.add('positivo');
-            saldoElem.classList.remove('negativo');
-        } else {
-            saldoElem.classList.add('negativo');
-            saldoElem.classList.remove('positivo');
-        }
-        document.getElementById('totalIngresos').textContent = ingresos.toFixed(2) + ' €';
-        document.getElementById('totalGastos').textContent = gastos.toFixed(2) + ' €';
-        
+        const saldoClase = saldo >= 0 ? 'positivo' : 'negativo';
         const grupos = agruparPorMes(movimientos);
-        const contenedor = document.getElementById('listaMeses');
         
+        let historialHtml = '';
         if (grupos.length === 0) {
-            contenedor.innerHTML = '<div class="vacio">✨ No hay movimientos aún. Añade tu primer ingreso o gasto.</div>';
-            return;
+            historialHtml = '<div class="vacio">✨ No hay movimientos aún. Añade tu primer ingreso o gasto.</div>';
+        } else {
+            grupos.forEach((grupo, idx) => {
+                const saldoMes = grupo.ingresos - grupo.gastos;
+                const saldoMesClase = saldoMes >= 0 ? 'positivo' : 'negativo';
+                historialHtml += `
+                    <div class="mes-grupo">
+                        <div class="mes-header" onclick="window.toggleMes(this)">
+                            <div class="mes-titulo">
+                                📆 ${grupo.nombre}
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="mes-totales">
+                                <span class="mes-ingresos">+${grupo.ingresos.toFixed(2)}€</span> &nbsp;|&nbsp;
+                                <span class="mes-gastos">-${grupo.gastos.toFixed(2)}€</span> &nbsp;|&nbsp;
+                                <span class="mes-saldo ${saldoMesClase}">${saldoMes >= 0 ? '+' : ''}${saldoMes.toFixed(2)}€</span>
+                            </div>
+                        </div>
+                        <div class="movimientos-mes">
+                `;
+                grupo.movimientos.forEach(mov => {
+                    const claseTipo = mov.tipo === 'ingreso' ? 'mov-ingreso' : 'mov-gasto';
+                    const montoClase = mov.tipo === 'ingreso' ? 'monto-ingreso' : 'monto-gasto';
+                    const signo = mov.tipo === 'ingreso' ? '+' : '-';
+                    const fechaObj = new Date(mov.fechaISO);
+                    const fechaMostrar = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                    historialHtml += `
+                        <div class="movimiento ${claseTipo}">
+                            <div class="mov-info">
+                                <div class="mov-desc">${escapeHtml(mov.descripcion)}</div>
+                                <div class="mov-fecha">📅 ${escapeHtml(fechaMostrar)}</div>
+                            </div>
+                            <div class="mov-monto ${montoClase}">
+                                ${signo} ${mov.cantidad.toFixed(2)} €
+                            </div>
+                        </div>
+                    `;
+                });
+                historialHtml += `</div></div>`;
+            });
         }
         
-        let html = '';
-        grupos.forEach((grupo, idx) => {
-            const saldoMes = grupo.ingresos - grupo.gastos;
-            const saldoClase = saldoMes >= 0 ? 'positivo' : 'negativo';
-            html += `
-                <div class="mes-grupo" data-meskey="${idx}">
-                    <div class="mes-header" onclick="toggleMes(this)">
-                        <div class="mes-titulo">
-                            📆 ${grupo.nombre}
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div class="mes-totales">
-                            <span class="mes-ingresos">+${grupo.ingresos.toFixed(2)}€</span> &nbsp;|&nbsp;
-                            <span class="mes-gastos">-${grupo.gastos.toFixed(2)}€</span> &nbsp;|&nbsp;
-                            <span class="mes-saldo ${saldoClase}">${saldoMes >= 0 ? '+' : ''}${saldoMes.toFixed(2)}€</span>
-                        </div>
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="card">
+                <h1>🚛 Trailer Control <small>Autónomo</small></h1>
+                <div id="saldoDisplay" class="saldo ${saldoClase}">${saldo.toFixed(2)} €</div>
+                <div class="resumen">
+                    <div class="resumen-item">💰 Ingresos totales: <strong>${ingresos.toFixed(2)} €</strong></div>
+                    <div class="resumen-item">💸 Gastos totales: <strong>${gastos.toFixed(2)} €</strong></div>
+                </div>
+                <div class="sync-status">✅ Conectado con Google Sheets</div>
+            </div>
+            
+            <div class="card">
+                <h2>📝 Nuevo movimiento</h2>
+                <div class="row-2cols">
+                    <div>
+                        <label>Tipo</label>
+                        <select id="tipoMovimiento">
+                            <option value="ingreso">✅ Ingreso</option>
+                            <option value="gasto">❌ Gasto</option>
+                        </select>
                     </div>
-                    <div class="movimientos-mes">
-            `;
-            grupo.movimientos.forEach(mov => {
-                const claseTipo = mov.tipo === 'ingreso' ? 'mov-ingreso' : 'mov-gasto';
-                const montoClase = mov.tipo === 'ingreso' ? 'monto-ingreso' : 'monto-gasto';
-                const signo = mov.tipo === 'ingreso' ? '+' : '-';
-                const fechaObj = new Date(mov.fechaISO);
-                const fechaMostrar = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-                html += `
-                    <div class="movimiento ${claseTipo}">
-                        <div class="mov-info">
-                            <div class="mov-desc">${escapeHtml(mov.descripcion)}</div>
-                            <div class="mov-fecha">📅 ${escapeHtml(fechaMostrar)}</div>
-                        </div>
-                        <div class="mov-monto ${montoClase}">
-                            ${signo} ${mov.cantidad.toFixed(2)} €
-                        </div>
+                    <div>
+                        <label>Cantidad (€)</label>
+                        <input type="number" id="cantidad" step="0.01" placeholder="0.00">
                     </div>
-                `;
-            });
-            html += `</div></div>`;
+                </div>
+                <div class="form-group">
+                    <label>Concepto / Descripción</label>
+                    <input type="text" id="descripcion" placeholder="Ej: 500L gasóleo, manguera, carga...">
+                </div>
+                <div class="form-group">
+                    <label>📅 Fecha del movimiento</label>
+                    <input type="date" id="fechaMovimiento" value="${getTodayDate()}">
+                    <div class="fecha-actual-hint">💡 Puedes cambiar la fecha para registrar gastos de meses anteriores.</div>
+                </div>
+                <button id="agregarBtn">➕ Agregar movimiento</button>
+            </div>
+            
+            <div class="card">
+                <h2>📅 Historial por meses</h2>
+                <div id="listaMeses" class="lista-movimientos">${historialHtml}</div>
+            </div>
+        `;
+        
+        // Reasignar eventos
+        document.getElementById('agregarBtn').addEventListener('click', async () => {
+            const tipo = document.getElementById('tipoMovimiento').value;
+            const cantidad = parseFloat(document.getElementById('cantidad').value);
+            const descripcion = document.getElementById('descripcion').value;
+            const fechaISO = document.getElementById('fechaMovimiento').value;
+            if (await agregarMovimiento(tipo, cantidad, descripcion, fechaISO)) {
+                document.getElementById('cantidad').value = '';
+                document.getElementById('descripcion').value = '';
+                document.getElementById('fechaMovimiento').value = getTodayDate();
+                document.getElementById('cantidad').focus();
+            }
         });
-        contenedor.innerHTML = html;
+        
+        const inputs = ['cantidad', 'descripcion', 'fechaMovimiento'];
+        inputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('agregarBtn').click();
+                    }
+                });
+            }
+        });
     }
     
     window.toggleMes = function(headerElement) {
@@ -536,42 +606,27 @@
         });
     }
     
-    document.addEventListener('DOMContentLoaded', () => {
-        const fechaInput = document.getElementById('fechaMovimiento');
-        if (fechaInput) fechaInput.value = getTodayDate();
-        
-        const agregarBtn = document.getElementById('agregarBtn');
-        const tipoSelect = document.getElementById('tipoMovimiento');
-        const cantidadInput = document.getElementById('cantidad');
-        const descripcionInput = document.getElementById('descripcion');
-        
-        agregarBtn.addEventListener('click', async () => {
-            const tipo = tipoSelect.value;
-            const cantidad = parseFloat(cantidadInput.value);
-            const descripcion = descripcionInput.value;
-            const fechaISO = fechaInput.value;
-            if (await agregarMovimiento(tipo, cantidad, descripcion, fechaISO)) {
-                cantidadInput.value = '';
-                descripcionInput.value = '';
-                fechaInput.value = getTodayDate();
-                cantidadInput.focus();
-            }
-        });
-        
-        const inputs = [cantidadInput, descripcionInput, fechaInput];
-        inputs.forEach(input => {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    agregarBtn.click();
-                }
-            });
-        });
-        
-        cargarDatos();
-        // Recargar cada 10 segundos para mantener sincronizado
-        setInterval(cargarDatos, 10000);
-    });
+    // Iniciar la app
+    async function init() {
+        const autenticado = await verificarAutenticacion();
+        if (autenticado) {
+            usuarioAutenticado = true;
+            await cargarDatos();
+            renderizarApp();
+        } else {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="card login-card">
+                    <h2>🔐 Acceso restringido</h2>
+                    <p>Esta aplicación requiere iniciar sesión con Google para ver los datos.</p>
+                    <p>Solo las personas autorizadas (tú, tu padre, tu hermana) pueden acceder.</p>
+                    <button class="login-btn" onclick="iniciarSesion()">🔐 Iniciar sesión con Google</button>
+                </div>
+            `;
+        }
+    }
+    
+    init();
 </script>
 </body>
 </html>
