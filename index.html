@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Control Trailer - Datos compartidos</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin: 0 0 8px 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        h1 small {
+            font-size: 0.8rem;
+            font-weight: normal;
+            background: #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 40px;
+            color: #0f172a;
+        }
+        .saldo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 16px 0 8px;
+        }
+        .saldo.positivo { color: #10b981; }
+        .saldo.negativo { color: #ef4444; }
+        .resumen {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .resumen-item {
+            background: #f8fafc;
+            padding: 10px 16px;
+            border-radius: 32px;
+            font-size: 0.9rem;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #334155;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 1rem;
+            background: white;
+        }
+        .row-2cols {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .row-2cols > div {
+            flex: 1;
+            min-width: 120px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .btn-sec {
+            background: #64748b;
+        }
+        .btn-sec:hover {
+            background: #475569;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+        .mes-grupo {
+            margin-bottom: 28px;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .mes-header {
+            background: #eef2ff;
+            padding: 12px 16px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .mes-header:hover {
+            background: #e0e7ff;
+        }
+        .mes-titulo {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mes-totales {
+            font-size: 0.85rem;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+        .mes-ingresos { color: #10b981; }
+        .mes-gastos { color: #ef4444; }
+        .mes-saldo { font-weight: 700; }
+        .movimientos-mes {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+            overflow: hidden;
+        }
+        .movimiento {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9fb;
+            padding: 12px 16px;
+            border-bottom: 1px solid #edf2f7;
+            border-left: 6px solid;
+        }
+        .movimiento:last-child {
+            border-bottom: none;
+        }
+        .mov-ingreso {
+            border-left-color: #10b981;
+        }
+        .mov-gasto {
+            border-left-color: #ef4444;
+        }
+        .mov-info {
+            flex: 1;
+        }
+        .mov-desc {
+            font-weight: 600;
+        }
+        .mov-fecha {
+            font-size: 0.7rem;
+            color: #6c757d;
+        }
+        .mov-monto {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .monto-ingreso {
+            color: #10b981;
+        }
+        .monto-gasto {
+            color: #ef4444;
+        }
+        .acciones {
+            display: flex;
+            gap: 12px;
+            margin-left: 12px;
+        }
+        .eliminar-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #94a3b8;
+            width: auto;
+            padding: 4px 8px;
+        }
+        .eliminar-btn:hover {
+            color: #ef4444;
+            background: none;
+        }
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .vacio {
+            text-align: center;
+            color: #6c757d;
+            padding: 24px;
+        }
+        .toggle-icon {
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+        .fecha-actual-hint {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .sync-status {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-align: right;
+            margin-top: 8px;
+        }
+        @media (max-width: 500px) {
+            body { padding: 12px; }
+            .saldo { font-size: 1.8rem; }
+            .mes-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h1>🚛 Trailer Control <small>Datos compartidos</small></h1>
+        <div id="saldoDisplay" class="saldo">0,00 €</div>
+        <div class="resumen">
+            <div class="resumen-item">💰 Ingresos totales: <strong id="totalIngresos">0,00 €</strong></div>
+            <div class="resumen-item">💸 Gastos totales: <strong id="totalGastos">0,00 €</strong></div>
+        </div>
+        <div id="syncStatus" class="sync-status">🔄 Conectando...</div>
+    </div>
+
+    <div class="card">
+        <h2>📝 Nuevo movimiento</h2>
+        <div class="row-2cols">
+            <div>
+                <label>Tipo</label>
+                <select id="tipoMovimiento">
+                    <option value="ingreso">✅ Ingreso</option>
+                    <option value="gasto">❌ Gasto</option>
+                </select>
+            </div>
+            <div>
+                <label>Cantidad (€)</label>
+                <input type="number" id="cantidad" step="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Concepto / Descripción</label>
+            <input type="text" id="descripcion" placeholder="Ej: 500L gasóleo, manguera, carga...">
+        </div>
+        <div class="form-group">
+            <label>📅 Fecha del movimiento</label>
+            <input type="date" id="fechaMovimiento">
+            <div class="fecha-actual-hint">💡 Puedes cambiar la fecha para registrar gastos de meses anteriores.</div>
+        </div>
+        <button id="agregarBtn">➕ Agregar movimiento</button>
+    </div>
+
+    <div class="card">
+        <h2>📅 Historial por meses</h2>
+        <div id="listaMeses" class="lista-movimientos">
+            <div class="loading">Cargando datos...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ IMPORTANTE: PON AQUÍ TU URL DE GOOGLE APPS SCRIPT
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYaC00NJsToCWQktiRLYA79GutLsW8Tdp2r_hT6gRn7nd_-z80KCJD76pjd2cjcWNv/exec';
+    
+    let movimientos = [];
+    let cargando = false;
+
+    function getTodayDate() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    async function cargarDatos() {
+        const statusDiv = document.getElementById('syncStatus');
+        statusDiv.innerHTML = '🔄 Cargando datos de la nube...';
+        
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const data = await response.json();
+            
+            if (Array.isArray(data)) {
+                movimientos = data.map(m => ({
+                    ...m,
+                    id: parseInt(m.id),
+                    cantidad: parseFloat(m.cantidad)
+                }));
+                statusDiv.innerHTML = '✅ Datos sincronizados con la nube';
+                setTimeout(() => {
+                    if (statusDiv.innerHTML === '✅ Datos sincronizados con la nube') {
+                        statusDiv.innerHTML = '📡 Conectado';
+                    }
+                }, 3000);
+            } else {
+                throw new Error('Datos inválidos');
+            }
+        } catch (error) {
+            console.error('Error al cargar:', error);
+            statusDiv.innerHTML = '⚠️ Error de conexión. Recargando...';
+            setTimeout(() => cargarDatos(), 3000);
+        }
+        
+        renderizarTodo();
+    }
+
+    async function agregarMovimiento(tipo, cantidad, descripcion, fechaISO) {
+        if (isNaN(cantidad) || cantidad <= 0) {
+            alert('Por favor ingresa una cantidad válida mayor que cero.');
+            return false;
+        }
+        if (!descripcion || descripcion.trim() === '') {
+            alert('Escribe una descripción o concepto.');
+            return false;
+        }
+        if (!fechaISO) {
+            alert('Selecciona una fecha válida.');
+            return false;
+        }
+        
+        const nuevoMov = {
+            accion: 'guardar',
+            tipo: tipo,
+            cantidad: parseFloat(cantidad),
+            descripcion: descripcion.trim(),
+            fechaISO: fechaISO
+        };
+        
+        const statusDiv = document.getElementById('syncStatus');
+        statusDiv.innerHTML = '💾 Guardando en la nube...';
+        
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(nuevoMov)
+            });
+            
+            statusDiv.innerHTML = '✅ Guardado correctamente';
+            setTimeout(() => {
+                if (statusDiv.innerHTML === '✅ Guardado correctamente') {
+                    statusDiv.innerHTML = '📡 Conectado';
+                }
+            }, 2000);
+            
+            // Recargar datos después de guardar
+            await cargarDatos();
+            return true;
+        } catch (error) {
+            console.error('Error al guardar:', error);
+            statusDiv.innerHTML = '❌ Error al guardar. Intenta de nuevo.';
+            return false;
+        }
+    }
+
+    function calcularTotalesGlobales() {
+        let ingresos = 0, gastos = 0;
+        movimientos.forEach(m => {
+            if (m.tipo === 'ingreso') ingresos += m.cantidad;
+            else gastos += m.cantidad;
+        });
+        return { ingresos, gastos, saldo: ingresos - gastos };
+    }
+
+    function agruparPorMes(movs) {
+        const grupos = new Map();
+        
+        movs.forEach(mov => {
+            const fechaObj = new Date(mov.fechaISO);
+            if (isNaN(fechaObj.getTime())) return;
+            
+            const año = fechaObj.getFullYear();
+            const mes = fechaObj.getMonth();
+            const key = `${año}-${mes}`;
+            const nombreMes = fechaObj.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+            
+            if (!grupos.has(key)) {
+                grupos.set(key, {
+                    nombre: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1),
+                    año,
+                    mes,
+                    movimientos: [],
+                    ingresos: 0,
+                    gastos: 0
+                });
+            }
+            const grupo = grupos.get(key);
+            grupo.movimientos.push(mov);
+            if (mov.tipo === 'ingreso') grupo.ingresos += mov.cantidad;
+            else grupo.gastos += mov.cantidad;
+        });
+        
+        const gruposArray = Array.from(grupos.values());
+        gruposArray.sort((a, b) => {
+            if (a.año !== b.año) return b.año - a.año;
+            return b.mes - a.mes;
+        });
+        
+        gruposArray.forEach(grupo => {
+            grupo.movimientos.sort((x, y) => new Date(y.fechaISO) - new Date(x.fechaISO));
+        });
+        
+        return gruposArray;
+    }
+
+    function renderizarTodo() {
+        const { ingresos, gastos, saldo } = calcularTotalesGlobales();
+        const saldoElem = document.getElementById('saldoDisplay');
+        saldoElem.textContent = saldo.toFixed(2) + ' €';
+        if (saldo >= 0) {
+            saldoElem.classList.add('positivo');
+            saldoElem.classList.remove('negativo');
+        } else {
+            saldoElem.classList.add('negativo');
+            saldoElem.classList.remove('positivo');
+        }
+        document.getElementById('totalIngresos').textContent = ingresos.toFixed(2) + ' €';
+        document.getElementById('totalGastos').textContent = gastos.toFixed(2) + ' €';
+        
+        const grupos = agruparPorMes(movimientos);
+        const contenedor = document.getElementById('listaMeses');
+        
+        if (grupos.length === 0) {
+            contenedor.innerHTML = '<div class="vacio">✨ No hay movimientos aún. Añade tu primer ingreso o gasto.</div>';
+            return;
+        }
+        
+        let html = '';
+        grupos.forEach((grupo, idx) => {
+            const saldoMes = grupo.ingresos - grupo.gastos;
+            const saldoClase = saldoMes >= 0 ? 'positivo' : 'negativo';
+            html += `
+                <div class="mes-grupo" data-meskey="${idx}">
+                    <div class="mes-header" onclick="toggleMes(this)">
+                        <div class="mes-titulo">
+                            📆 ${grupo.nombre}
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="mes-totales">
+                            <span class="mes-ingresos">+${grupo.ingresos.toFixed(2)}€</span> &nbsp;|&nbsp;
+                            <span class="mes-gastos">-${grupo.gastos.toFixed(2)}€</span> &nbsp;|&nbsp;
+                            <span class="mes-saldo ${saldoClase}">${saldoMes >= 0 ? '+' : ''}${saldoMes.toFixed(2)}€</span>
+                        </div>
+                    </div>
+                    <div class="movimientos-mes">
+            `;
+            grupo.movimientos.forEach(mov => {
+                const claseTipo = mov.tipo === 'ingreso' ? 'mov-ingreso' : 'mov-gasto';
+                const montoClase = mov.tipo === 'ingreso' ? 'monto-ingreso' : 'monto-gasto';
+                const signo = mov.tipo === 'ingreso' ? '+' : '-';
+                const fechaObj = new Date(mov.fechaISO);
+                const fechaMostrar = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                html += `
+                    <div class="movimiento ${claseTipo}">
+                        <div class="mov-info">
+                            <div class="mov-desc">${escapeHtml(mov.descripcion)}</div>
+                            <div class="mov-fecha">📅 ${escapeHtml(fechaMostrar)}</div>
+                        </div>
+                        <div class="mov-monto ${montoClase}">
+                            ${signo} ${mov.cantidad.toFixed(2)} €
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        });
+        contenedor.innerHTML = html;
+    }
+    
+    window.toggleMes = function(headerElement) {
+        const movimientosDiv = headerElement.nextElementSibling;
+        if (movimientosDiv && movimientosDiv.classList.contains('movimientos-mes')) {
+            const isHidden = movimientosDiv.style.display === 'none';
+            movimientosDiv.style.display = isHidden ? 'block' : 'none';
+            const icon = headerElement.querySelector('.toggle-icon');
+            if (icon) {
+                icon.textContent = isHidden ? '▼' : '▶';
+            }
+        }
+    };
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const fechaInput = document.getElementById('fechaMovimiento');
+        if (fechaInput) fechaInput.value = getTodayDate();
+        
+        const agregarBtn = document.getElementById('agregarBtn');
+        const tipoSelect = document.getElementById('tipoMovimiento');
+        const cantidadInput = document.getElementById('cantidad');
+        const descripcionInput = document.getElementById('descripcion');
+        
+        agregarBtn.addEventListener('click', async () => {
+            const tipo = tipoSelect.value;
+            const cantidad = parseFloat(cantidadInput.value);
+            const descripcion = descripcionInput.value;
+            const fechaISO = fechaInput.value;
+            if (await agregarMovimiento(tipo, cantidad, descripcion, fechaISO)) {
+                cantidadInput.value = '';
+                descripcionInput.value = '';
+                fechaInput.value = getTodayDate();
+                cantidadInput.focus();
+            }
+        });
+        
+        const inputs = [cantidadInput, descripcionInput, fechaInput];
+        inputs.forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    agregarBtn.click();
+                }
+            });
+        });
+        
+        cargarDatos();
+        // Recargar cada 10 segundos para mantener sincronizado
+        setInterval(cargarDatos, 10000);
+    });
+</script>
+</body>
+</html>
